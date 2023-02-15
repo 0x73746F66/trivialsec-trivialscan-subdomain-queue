@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -x
+PRIMARY='\033[1;36m'
+NC='\033[0m' # No Color
+readonly CWD=$(pwd)
+readonly APP_ENV=${APP_ENV:-Dev}
+readonly BUILD_ENV=${BUILD_ENV:-development}
+readonly SOURCE_FILE=plans/${SOURCE_FILE:-$(echo "$APP_ENV" | awk '{print tolower($0)}')-$(basename $CWD).zip}
+readonly IMAGE_NAME=${IMAGE_NAME:-pip-builder}
+readonly PYTHON_VERSION=${PYTHON_VERSION:-python3.9}
+
+echo -e "${PRIMARY}Cleaning up${NC}"
+rm ${SOURCE_FILE}
+rm -rf .${BUILD_ENV}/${PYTHON_VERSION}
+
+echo -e "${PRIMARY}Building ${IMAGE_NAME}${NC}"
+docker build \
+  -t ${IMAGE_NAME} \
+  -f Dockerfile . || exit 1
+CONTAINER=$(docker run --rm -d ${IMAGE_NAME} false)
+rm -rf .${BUILD_ENV}/${PYTHON_VERSION}
+mkdir -p .${BUILD_ENV}/${PYTHON_VERSION}
+docker cp -L $CONTAINER:/var/lang/lib/${PYTHON_VERSION}/site-packages .${BUILD_ENV}/${PYTHON_VERSION}/
+docker stop $CONTAINER
+
+echo -e "${PRIMARY}Archiving ${SOURCE_FILE}${NC}"
+cd .${BUILD_ENV}/${PYTHON_VERSION}/site-packages
+zip -qr ${CWD}/${SOURCE_FILE} * -x "*.dist-info*" -x "*__pycache__*" -x "*.egg-info*"
+cd ${CWD}/src
+zip -qr ${CWD}/${SOURCE_FILE} * -x "*.dist-info*" -x "*__pycache__*" -x "*.egg-info*" -x "run.py"

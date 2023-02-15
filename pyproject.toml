@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=46.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trivialscan-subdomains-queue"
+version = "1.0.0"
+description = "Trivial Security Subdomains Queue"
+authors = [
+    {name = "Christopher Langton", email = "chris@trivialsec.com"},
+]
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "pydantic == 1.9.2",
+    "requests == 2.28.1",
+    "retry == 0.9.2",
+    "validators == 0.18.2",
+    "tldextract == 3.4.0",
+]
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "--cov --cov-report html --cov-report term-missing --cov-fail-under 95"
+
+[tool.pylint]
+max-line-length = 88
+disable = [
+    "C0114", # (missing-module-docstring)
+    "C0115", # (missing-class-docstring)
+    "C0116", # (missing-function-docstring)
+    "R0903", # (too-few-public-methods)
+    "R0913", # (too-many-arguments)
+    "W0105", # (pointless-string-statement)
+]
+
+[tool.pylint.'MESSAGES CONTROL']
+extension-pkg-whitelist = "pydantic"
+
+[project.scripts]
+run = "run:run"

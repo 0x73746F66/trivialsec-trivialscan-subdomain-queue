@@ -1,0 +1,14 @@
+setuptools
+wheel
+bandit
+autopep8
+pylint
+pytest
+coverage
+boto3
+typed-ast
+black
+pre-commit
+detect-secrets
+pip-audit
+rich==12.4.4

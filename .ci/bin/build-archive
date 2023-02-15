@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -x
+readonly CWD=$(pwd)
+readonly PYTHON_VERSION=${PYTHON_VERSION:-python3.9}
+if [ -z "${APP_ENV}" ]; then
+    echo "APP_ENV not set"
+    exit 1
+fi
+readonly SOURCE_FILE=${SOURCE_FILE:-$(echo "$APP_ENV" | awk '{print tolower($0)}')-$(basename $CWD).zip}
+readonly IMAGE_NAME=${IMAGE_NAME:-trivialscan-subdomains-queue-ci}
+if [ -z "${SOURCE_FILE}" ]; then
+    echo "SOURCE_FILE not set"
+    exit 1
+fi
+if [ -z "${IMAGE_NAME}" ]; then
+    echo "IMAGE_NAME not set"
+    exit 1
+fi
+
+echo -e "Cleaning up"
+rm ${SOURCE_FILE}
+rm -rf .${BUILD_ENV}/${PYTHON_VERSION}
+
+echo -e "Building ${IMAGE_NAME}"
+docker build \
+  -t ${IMAGE_NAME} \
+  -f Dockerfile . || exit 1
+CONTAINER=$(docker run --rm -d ${IMAGE_NAME} false)
+rm -rf .${BUILD_ENV}/${PYTHON_VERSION}
+mkdir -p .${BUILD_ENV}/${PYTHON_VERSION}
+docker cp -L $CONTAINER:/var/lang/lib/${PYTHON_VERSION}/site-packages .${BUILD_ENV}/${PYTHON_VERSION}/
+docker stop $CONTAINER
+
+echo -e "Archiving ${SOURCE_FILE}"
+cd .${BUILD_ENV}/${PYTHON_VERSION}/site-packages
+zip -qr ${CWD}/${SOURCE_FILE} * -x "*.dist-info*" -x "*__pycache__*" -x "*.egg-info*"
+cd ${CWD}/src
+zip -qr ${CWD}/${SOURCE_FILE} * -x "*.dist-info*" -x "*__pycache__*" -x "*.egg-info*" -x "run.py"

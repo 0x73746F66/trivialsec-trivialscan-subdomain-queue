@@ -1,0 +1,5 @@
+pylint
+pytest
+coverage
+pre-commit
+pip-audit

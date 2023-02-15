@@ -1,0 +1,237 @@
+variables:
+  BUILD_ENV: ci
+  APP_ENV: Prod
+  SOURCE_FILE: prod-trivialscan-subdomains-queue.zip
+  IMAGE_NAME: trivialscan-subdomains-queue-ci
+  TF_VAR_app_env: Prod
+  TF_VAR_log_level: WARNING
+  TF_VAR_app_name: trivialscan-subdomains-queue
+  TF_LOG: WARN
+
+stages:
+  - tests
+  - pre-deploy
+  - deploy
+  - post-deploy
+
+validate:
+  stage: tests
+  tags:
+    - jager
+  allow_failure: true
+  script:
+    - |+
+      TOOLS="terraform_checkov terraform_validate"
+      for i in $TOOLS
+      do
+        pre-commit run $i --local-branch ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}
+      done
+  only:
+    refs:
+      - merge_request
+      - main
+
+sast docker:
+  stage: tests
+  tags:
+    - jager
+  allow_failure: true
+  script:
+    - pre-commit run dockerfilelint --local-branch ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}
+  only:
+    refs:
+      - merge_request
+      - main
+
+sast black:
+  stage: tests
+  tags:
+    - jager
+  allow_failure: true
+  script:
+    - pre-commit run black --local-branch ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}
+  only:
+    refs:
+      - merge_request
+      - main
+
+sast flake8:
+  stage: tests
+  tags:
+    - jager
+  allow_failure: true
+  script:
+    - pre-commit run flake8 --local-branch ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}
+  only:
+    refs:
+      - merge_request
+      - main
+
+sast pylint:
+  stage: tests
+  tags:
+    - jager
+  allow_failure: true
+  script:
+    - pre-commit run pylint --local-branch ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}
+  only:
+    refs:
+      - merge_request
+      - main
+
+sca pip-audit:
+  stage: tests
+  tags:
+    - jager
+  allow_failure: true
+  script:
+    - pre-commit run pip-audit --local-branch ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}
+  only:
+    refs:
+      - merge_request
+      - main
+
+secrets scanning:
+  stage: tests
+  tags:
+    - jager
+  allow_failure: true
+  script:
+    - |+
+      TOOLS="detect-private-key detect-secrets"
+      for i in $TOOLS
+      do
+        pre-commit run $i --local-branch ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}
+      done
+  only:
+    refs:
+      - merge_request
+      - main
+
+repo checks:
+  stage: tests
+  tags:
+    - jager
+  script:
+    - echo $CI_COMMIT_MESSAGE > commit-msg.txt
+    - pre-commit run conventional-pre-commit --hook-stage commit-msg --commit-msg-filename commit-msg.txt --local-branch ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}
+    - |+
+      TOOLS="no-commit-to-branch mixed-line-ending check-merge-conflict"
+      for i in $TOOLS
+      do
+        pre-commit run $i --local-branch ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}
+      done
+  only:
+    refs:
+      - merge_request
+      - main
+
+python syntax:
+  stage: tests
+  tags:
+    - jager
+  allow_failure: true
+  script:
+    - |+
+      TOOLS="check-ast debug-statements check-builtin-literals"
+      for i in $TOOLS
+      do
+        pre-commit run $i --local-branch ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}
+      done
+  only:
+    refs:
+      - merge_request
+      - main
+
+whitespace:
+  stage: tests
+  tags:
+    - jager
+  allow_failure: true
+  script:
+    - |+
+      TOOLS="remove-tabs trailing-whitespace"
+      for i in $TOOLS
+      do
+        pre-commit run $i --local-branch ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}
+      done
+  only:
+    refs:
+      - merge_request
+      - main
+
+yaml json py linting:
+  stage: tests
+  tags:
+    - jager
+  allow_failure: true
+  script:
+    - |+
+      TOOLS="prettier typos pretty-format-json check-json check-yaml"
+      for i in $TOOLS
+      do
+        pre-commit run $i --local-branch ${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-$CI_COMMIT_BRANCH}
+      done
+  only:
+    refs:
+      - merge_request
+      - main
+
+tf:plan:
+  retry: 2
+  tags:
+    - jager
+  stage: pre-deploy
+  script:
+    - make -B build init plan
+  only:
+    refs:
+      - merge_request
+      - main
+  artifacts:
+    name: tfplan
+    paths:
+      - $SOURCE_FILE
+      - plans/.tfplan
+      - plans/.terraform.lock.hcl
+      - plans/.terraform
+    reports:
+      terraform: plans/tfplan.json
+
+tf:apply:
+  retry: 2
+  tags:
+    - jager
+  stage: deploy
+  script:
+    - make apply
+  only:
+    refs:
+      - main
+  environment:
+    name: aws
+    url: https://sso.jumpcloud.com/saml2/aws1
+    on_stop: tf:destroy
+  dependencies:
+    - tf:plan
+  when: manual
+
+tf:destroy:
+  retry: 2
+  stage: post-deploy
+  variables:
+    GIT_STRATEGY: none
+  tags:
+    - jager
+  script:
+    - make destroy
+  when: manual
+  environment:
+    name: aws
+    action: stop
+  artifacts:
+    name: tfdestroy
+    paths:
+      - plans/.tfdestroy
+    reports:
+      terraform: plans/tfdestroy.json
