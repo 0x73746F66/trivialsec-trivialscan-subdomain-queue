@@ -4,7 +4,7 @@ import hashlib
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 from typing import Union, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 import validators
@@ -721,6 +721,13 @@ class Host(BaseModel, DAL):
     monitoring_enabled: Optional[bool] = Field(default=False)
     threat_intel: Optional[list[ThreatIntel]] = Field(default=[])
 
+    class Config:
+        validate_assignment = True
+
+    @validator("last_updated")
+    def set_last_updated(cls, last_updated: datetime):
+        return last_updated.replace(tzinfo=timezone.utc) if last_updated else None
+
     def exists(
         self,
         hostname: Union[str, None] = None,
@@ -728,7 +735,7 @@ class Host(BaseModel, DAL):
         peer_address: Union[str, None] = None,
         last_updated: Union[datetime, None] = None,
     ) -> bool:
-        return self.load(hostname, port, peer_address, last_updated) is not None
+        return self.load(hostname, port, peer_address, last_updated)
 
     def load(
         self,
@@ -753,17 +760,17 @@ class Host(BaseModel, DAL):
         raw = services.aws.get_s3(path_key=object_key)
         if not raw:
             internals.logger.warning(f"Missing Host {object_key}")
-            return
+            return False
         try:
             data = json.loads(raw)
         except json.decoder.JSONDecodeError as err:
             internals.logger.debug(err, exc_info=True)
-            return
+            return False
         if not data or not isinstance(data, dict):
             internals.logger.warning(f"Missing Host {object_key}")
-            return
+            return False
         super().__init__(**data)
-        return self
+        return True
 
     def save(self) -> bool:
         data = self.dict()
@@ -772,12 +779,6 @@ class Host(BaseModel, DAL):
         if not services.aws.store_s3(object_key, json.dumps(data, default=str)):
             return False
         object_key = f"{internals.APP_ENV}/hosts/{self.transport.hostname}/{self.transport.port}/latest.json"
-        # preserve threat_intel
-        original = json.loads(services.aws.get_s3(object_key))
-        data.setdefault("threat_intel", [])
-        threat_intel: list = data["threat_intel"]
-        threat_intel.extend(original.get("threat_intel", []))
-        data["threat_intel"] = list(set(threat_intel))
         return services.aws.store_s3(object_key, json.dumps(data, default=str))
 
     def delete(self) -> bool:

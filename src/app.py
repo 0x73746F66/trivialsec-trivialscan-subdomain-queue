@@ -71,9 +71,9 @@ def handler(event, context):
             internals.logger.info(f"Already processed today {record.hostname}")
             continue
         internals.logger.info(f"Processing {record.hostname}")
-        executable = path.realpath(path.join(getcwd(), 'src' if internals.APP_ENV == 'Dev' else '', 'vendored', 'amass', 'amass'))
-        config_path = path.realpath(path.join(getcwd(), 'src' if internals.APP_ENV == 'Dev' else '', 'amass.ini'))
-        word_list = path.realpath(path.join(getcwd(), 'src' if internals.APP_ENV == 'Dev' else '', 'vendored', 'amass', 'bitquark_subdomains_top100K.txt'))
+        executable = path.realpath(path.join(getcwd(), 'vendored', 'amass', 'amass'))
+        config_path = path.realpath(path.join(getcwd(), 'amass.ini'))
+        word_list = path.realpath(path.join(getcwd(), 'vendored', 'amass', 'bitquark_subdomains_top100K.txt'))
         output_file = f'{internals.CACHE_DIR}/amass_{record.hostname}.json'
         params = [
             executable,
