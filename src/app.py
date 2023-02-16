@@ -95,7 +95,7 @@ def handler(event, context):
         proc = subprocess.run(params, check=False, capture_output=True)
         if err := proc.stderr.decode('utf-8').strip():
             internals.logger.error(err)
-            continue
+
         result_json = Path(output_file)
         if not result_json.exists():
             internals.logger.warning("No results")
