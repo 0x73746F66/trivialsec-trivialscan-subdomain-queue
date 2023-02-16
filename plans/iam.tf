@@ -52,6 +52,17 @@ data "aws_iam_policy_document" "trivialscan_subdomains_queue_iam_policy" {
     ]
   }
   statement {
+    sid = "${var.app_env}TrivialScannerLambdaSQS"
+    actions   = [
+      "sqs:SendMessage",
+      "sqs:ChangeMessageVisibility",
+      "sqs:Get*",
+    ]
+    resources = [
+      data.terraform_remote_state.reconnaissance_queue.outputs.reconnaissance_queue_arn
+    ]
+  }
+  statement {
     sid = "${var.app_env}TrivialScannerSubdomainsQueueSQS"
     actions = [
       "sqs:ReceiveMessage",

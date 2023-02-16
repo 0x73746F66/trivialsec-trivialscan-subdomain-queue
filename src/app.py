@@ -70,10 +70,11 @@ def handler(event, context):
         if services.aws.object_exists(checkpoint_path):
             internals.logger.info(f"Already processed today {record.hostname}")
             continue
+
         internals.logger.info(f"Processing {record.hostname}")
         executable = path.realpath(path.join(getcwd(), 'vendored', 'amass', 'amass'))
         config_path = path.realpath(path.join(getcwd(), 'amass.ini'))
-        word_list = path.realpath(path.join(getcwd(), 'vendored', 'amass', 'bitquark_subdomains_top100K.txt'))
+        word_list = path.realpath(path.join(getcwd(), 'vendored', 'amass', internals.AMASS_WORD_LIST))
         output_file = f'{internals.CACHE_DIR}/amass_{record.hostname}.json'
         params = [
             executable,
@@ -84,7 +85,7 @@ def handler(event, context):
             '-json',
             output_file,
             '-timeout',
-            '14',
+            internals.AMASS_TIMEOUT,
             '-w',
             word_list,
             '-d',
