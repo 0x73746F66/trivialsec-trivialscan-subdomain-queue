@@ -58,9 +58,9 @@ def handler(event, context):
         if not account.load():
             internals.logger.info(f"Missing account {record.account_name}")
             continue
-        scanner_record = models.ScannerRecord(account=account)  # type: ignore
+        scanner_record = models.ScannerRecord(account_name=account.name)  # type: ignore
         if not scanner_record.load():
-            scanner_record = models.ScannerRecord(account=account)
+            scanner_record = models.ScannerRecord(account_name=account.name)
 
         tld = TLDExtract(cache_dir=internals.CACHE_DIR)(f"http://{record.hostname}")
         if tld.registered_domain != record.hostname:
