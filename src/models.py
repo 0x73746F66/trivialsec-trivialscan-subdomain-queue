@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 from ipaddress import IPv4Address, IPv6Address, IPv4Network, IPv6Network
 
+import boto3
 import validators
 from pydantic import (
     BaseModel,
@@ -1175,9 +1176,7 @@ class ScannerRecord(BaseModel, DAL):
             self.account_name = account_name
         return services.aws.object_exists(self.object_key) is True
 
-    def load(
-        self, account_name: Union[str, None] = None
-    ) -> bool:
+    def load(self, account_name: Union[str, None] = None) -> bool:
         if account_name:
             self.account_name = account_name
         raw = services.aws.get_s3(path_key=self.object_key)
@@ -1193,14 +1192,31 @@ class ScannerRecord(BaseModel, DAL):
             internals.logger.warning(f"Missing Queue {self.object_key}")
             return False
         super().__init__(**data)
+        dynamodb = boto3.resource('dynamodb')
+        report_history = dynamodb.Table(f'{internals.APP_ENV}_report_history')
+        self.history = [ReportSummary(**item) for item in report_history.query(
+            KeyConditionExpression='account_name = :account_name',
+            ExpressionAttributeValues={
+                ':account_name': {'S': self.account_name}
+            }
+        ).get("items", [])]
+
         return True
 
     def save(self) -> bool:
+        dynamodb = boto3.resource('dynamodb')
+        report_history = dynamodb.Table(f'{internals.APP_ENV}_report_history')
+        for item in self.history:
+            report_history.put_item(Item=item.dict())
         return services.aws.store_s3(
             self.object_key, json.dumps(self.dict(), default=str)
         )
 
     def delete(self) -> bool:
+        dynamodb = boto3.resource('dynamodb')
+        report_history = dynamodb.Table(f'{internals.APP_ENV}_report_history')
+        for report in self.history:
+            report_history.delete_item(Key={'report_id': report.report_id})
         return services.aws.delete_s3(self.object_key)
 
 
