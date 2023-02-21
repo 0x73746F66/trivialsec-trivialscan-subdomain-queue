@@ -1,5 +1,6 @@
 import json
 import subprocess
+from uuid import uuid5
 from time import time
 from os import path, getcwd
 from pathlib import Path
@@ -106,6 +107,25 @@ def handler(event, context):
             except json.decoder.JSONDecodeError:
                 internals.logger.error(f"JSONDecodeError {line}")
                 continue
+            for address in result.get("addresses", []):
+                item = models.ObservedIdentifier(
+                    id=uuid5(namespace=internals.NAMESPACE, name=f"{account.name}{address['ip']}{address.get('asn')}"),
+                    account_name=account.name,
+                    source=models.ObservedSource.OSINT,
+                    source_data={
+                        'hostname': result.get("name"),
+                        'cidr': address.get("cidr"),
+                        'asn': address.get("asn"),
+                        'asn_desc': address.get("desc"),
+                        'sources': ",".join(result.get("sources", [])),
+                    },
+                    address=address['ip'],
+                    date=datetime.now(timezone.utc).timestamp() * 1000
+                )
+                services.aws.put_dynamodb(
+                    table_name=services.aws.Tables.OBSERVED_IDENTIFIERS,
+                    item=item.dict()
+                )
             if result.get("name") == record.hostname:
                 continue
             internals.logger.info(f"Found {result}")

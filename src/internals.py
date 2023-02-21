@@ -35,6 +35,7 @@ JITTER_SECONDS = int(getenv("JITTER_SECONDS", default="30"))
 APP_ENV = getenv("APP_ENV", "Dev")
 APP_NAME = getenv("APP_NAME", "trivialscan-monitor-queue")
 DASHBOARD_URL = "https://www.trivialsec.com"
+NAMESPACE = UUID('bc6e2cd5-1f59-487f-b05b-49946bd078b2')
 AMASS_TIMEOUT = getenv("AMASS_TIMEOUT", '12')
 AMASS_WORD_LIST = getenv("AMASS_WORD_LIST", "bitquark_subdomains_top100K.txt")
 
@@ -227,6 +228,8 @@ class JSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime):
             return o.replace(microsecond=0).isoformat()
+        if isinstance(o, int) and o > 10^38-1:
+            return str(o)
         if isinstance(
             o,
             (
