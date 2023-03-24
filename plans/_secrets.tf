@@ -3,3 +3,8 @@ variable "aws_secret_access_key" {
   type        = string
   sensitive   = true
 }
+variable "dynatrace_token" {
+  description = "DYNATRACE_TOKEN"
+  type        = string
+  sensitive   = true
+}

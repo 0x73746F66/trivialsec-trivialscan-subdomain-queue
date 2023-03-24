@@ -7,6 +7,7 @@ resource "aws_lambda_function" "trivialscan_subdomains_queue" {
   runtime          = local.python_version
   timeout          = local.timeout
   memory_size      = local.memory_size
+  layers           = var.app_env == "Prod" ? ["arn:aws:lambda:ap-southeast-2:725887861453:layer:Dynatrace_OneAgent_1_261_5_20230309-143152_python:1"] : []
 
   environment {
     variables = {
@@ -15,6 +16,12 @@ resource "aws_lambda_function" "trivialscan_subdomains_queue" {
       LOG_LEVEL    = var.log_level
       STORE_BUCKET = "${data.terraform_remote_state.trivialscan_s3.outputs.trivialscan_store_bucket[0]}"
       BUILD_ENV    = var.build_env
+      AWS_LAMBDA_EXEC_WRAPPER = "/opt/dynatrace" # Use the wrapper from the layer
+      DT_TENANT = var.app_env == "Prod" ? "xuf85063" : ""
+      DT_CLUSTER_ID = var.app_env == "Prod" ? "-1273248646" : ""
+      DT_CONNECTION_BASE_URL = "https://xuf85063.live.dynatrace.com"
+      DT_CONNECTION_AUTH_TOKEN = var.app_env == "Prod" ? var.dynatrace_token : ""
+      DT_OPEN_TELEMETRY_ENABLE_INTEGRATION = "true"
     }
   }
   lifecycle {
