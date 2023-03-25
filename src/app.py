@@ -1,8 +1,8 @@
+import os
 import json
 import subprocess
 from uuid import uuid5
 from time import time
-from os import path, getcwd
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
@@ -72,10 +72,13 @@ def handler(event, context):
             internals.logger.info(f"Already processed today {record.hostname}")
             continue
 
-        internals.logger.info(f"Processing {record.hostname}")
-        executable = path.realpath(path.join(getcwd(), 'vendored', 'amass', 'amass'))
-        config_path = path.realpath(path.join(getcwd(), 'amass.ini'))
-        word_list = path.realpath(path.join(getcwd(), 'vendored', 'amass', internals.AMASS_WORD_LIST))
+        internals.logger.info(f"PROCESSING {record.hostname}")
+        executable = os.path.realpath(os.path.join(os.path.dirname(__file__), 'vendored', 'amass', 'amass'))
+        if not Path(executable).is_file() or not os.access(executable, os.X_OK):
+            internals.logger.error(f"Not executable {executable}")
+            continue
+        config_path = os.path.realpath(os.path.join(os.path.dirname(__file__), 'amass.ini'))
+        word_list = os.path.realpath(os.path.join(os.path.dirname(__file__), 'vendored', 'amass', internals.AMASS_WORD_LIST))
         output_file = f'{internals.CACHE_DIR}/amass_{record.hostname}.json'
         params = [
             executable,
@@ -94,8 +97,13 @@ def handler(event, context):
         ]
         internals.logger.info(f"Executing {' '.join(params)}")
         proc = subprocess.run(params, check=False, capture_output=True)
-        if err := proc.stderr.decode('utf-8').strip():
-            internals.logger.error(err)
+        internals.logger.info(proc.stdout.decode('utf-8').strip())
+        if console_output := proc.stderr.decode('utf-8').strip():
+            if console_output.endswith("Discoveries are being migrated into the local database"):
+                internals.logger.info(console_output)
+            else:
+                internals.logger.error(console_output)
+                continue
 
         result_json = Path(output_file)
         if not result_json.exists():

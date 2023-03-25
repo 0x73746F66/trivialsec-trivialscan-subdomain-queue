@@ -38,6 +38,7 @@ DASHBOARD_URL = "https://www.trivialsec.com"
 NAMESPACE = UUID('bc6e2cd5-1f59-487f-b05b-49946bd078b2')
 AMASS_TIMEOUT = getenv("AMASS_TIMEOUT", '12')
 AMASS_WORD_LIST = getenv("AMASS_WORD_LIST", "bitquark_subdomains_top100K.txt")
+AMASS_SKIP_EXEC = getenv("AMASS_SKIP_EXEC", 'no')
 
 logger = logging.getLogger(__name__)
 if getenv("AWS_EXECUTION_ENV") is not None:

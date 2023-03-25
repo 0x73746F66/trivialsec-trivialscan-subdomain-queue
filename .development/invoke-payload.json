@@ -3,7 +3,7 @@
     {
       "messageId": "059f36b4-87a3-44ab-83d2-661975830a7d",
       "receiptHandle": "AQEBwJnKyrHigUMZj6rYigCgxlaS3SLy0a...",
-      "body": "{\"hostname\": \"trivialsec.com\", \"type\": \"Subdomains\"}",
+      "body": "{\"hostname\": \"langton.cloud\", \"type\": \"Subdomains\"}",
       "attributes": {
         "ApproximateReceiveCount": "1",
         "SentTimestamp": "1545082649183",
@@ -15,13 +15,13 @@
           "binaryListValues": [],
           "dataType": "String",
           "stringListValues": [],
-          "stringValue": "trivialsecuritytest"
+          "stringValue": "acme"
         },
         "queued_by": {
           "binaryListValues": [],
           "dataType": "String",
           "stringListValues": [],
-          "stringValue": "chris@trivialsec.com"
+          "stringValue": "chris@langton.cloud"
         },
         "queued_timestamp": {
           "binaryListValues": [],

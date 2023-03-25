@@ -35,6 +35,7 @@ def cli():
 
 def run():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-n", "--skip-exec", dest="skip_exec", action="store_true")
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "-v",
@@ -64,24 +65,26 @@ def run():
         dest="log_level_debug",
         action="store_true",
     )
-    LOG_LEVEL = logging.INFO
+    log_level = logging.INFO
     if parser.parse_args().log_level_error:
-        LOG_LEVEL = logging.ERROR
+        log_level = logging.ERROR
     if parser.parse_args().log_level_warning:
-        LOG_LEVEL = logging.WARNING
+        log_level = logging.WARNING
     if parser.parse_args().log_level_info:
-        LOG_LEVEL = logging.INFO
+        log_level = logging.INFO
     if parser.parse_args().log_level_debug:
-        LOG_LEVEL = logging.DEBUG
-    LOG_FORMAT = "%(asctime)s - %(name)s - [%(levelname)s] %(message)s"
+        log_level = logging.DEBUG
+    log_format = "%(asctime)s - %(name)s - [%(levelname)s] %(message)s"
     if sys.stdout.isatty():
-        LOG_FORMAT = "%(message)s"
+        log_format = "%(message)s"
         logging.basicConfig(
-            format=LOG_FORMAT,
-            level=LOG_LEVEL,
+            format=log_format,
+            level=log_level,
             handlers=[RichHandler(rich_tracebacks=True)],
         )
     internals.logger.setLevel(LOG_LEVEL)
+    if parser.parse_args().skip_exec:
+        internals.AMASS_SKIP_EXEC = 'yes'
     cli()
 
 
