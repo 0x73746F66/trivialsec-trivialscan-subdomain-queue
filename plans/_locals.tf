@@ -15,4 +15,5 @@ locals {
     timeout               = 900
     memory_size           = 512
     retention_in_days     = var.app_env == "Prod" ? 30 : 7
+    enable_dynatrace      = false # var.app_env == "Prod"
 }

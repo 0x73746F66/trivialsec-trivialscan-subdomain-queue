@@ -82,7 +82,7 @@ def run():
             level=log_level,
             handlers=[RichHandler(rich_tracebacks=True)],
         )
-    internals.logger.setLevel(LOG_LEVEL)
+    internals.logger.setLevel(log_level)
     if parser.parse_args().skip_exec:
         internals.AMASS_SKIP_EXEC = 'yes'
     cli()
