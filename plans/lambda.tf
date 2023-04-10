@@ -11,18 +11,18 @@ resource "aws_lambda_function" "trivialscan_subdomains_queue" {
 
   environment {
     variables = local.enable_dynatrace ? {
-      APP_ENV      = var.app_env
-      APP_NAME     = var.app_name
-      LOG_LEVEL    = var.log_level
-      STORE_BUCKET = data.terraform_remote_state.trivialscan_s3.outputs.trivialscan_store_bucket
-      BUILD_ENV    = var.build_env
-      AWS_LAMBDA_EXEC_WRAPPER = "/opt/dynatrace"
-      DT_TENANT = "xuf85063"
-      DT_CLUSTER_ID = "-1273248646"
-      DT_CONNECTION_BASE_URL = "https://xuf85063.live.dynatrace.com"
-      DT_CONNECTION_AUTH_TOKEN = var.dynatrace_token
+      APP_ENV                              = var.app_env
+      APP_NAME                             = var.app_name
+      LOG_LEVEL                            = var.log_level
+      STORE_BUCKET                         = data.terraform_remote_state.trivialscan_s3.outputs.trivialscan_store_bucket
+      BUILD_ENV                            = var.build_env
+      AWS_LAMBDA_EXEC_WRAPPER              = "/opt/dynatrace"
+      DT_TENANT                            = "xuf85063"
+      DT_CLUSTER_ID                        = "-1273248646"
+      DT_CONNECTION_BASE_URL               = "https://xuf85063.live.dynatrace.com"
+      DT_CONNECTION_AUTH_TOKEN             = var.dynatrace_token
       DT_OPEN_TELEMETRY_ENABLE_INTEGRATION = "true"
-    } : {
+      } : {
       APP_ENV      = var.app_env
       APP_NAME     = var.app_name
       LOG_LEVEL    = var.log_level

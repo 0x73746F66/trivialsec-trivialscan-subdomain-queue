@@ -53,7 +53,7 @@ data "aws_iam_policy_document" "trivialscan_subdomains_queue_iam_policy" {
   }
   statement {
     sid = "${var.app_env}TrivialScannerLambdaSQS"
-    actions   = [
+    actions = [
       "sqs:SendMessage",
       "sqs:ChangeMessageVisibility",
       "sqs:Get*",
@@ -76,7 +76,7 @@ data "aws_iam_policy_document" "trivialscan_subdomains_queue_iam_policy" {
   }
   statement {
     sid = "${var.app_env}SubdomainsQueueDynamoDB"
-    actions   = [
+    actions = [
       "dynamodb:PutItem",
     ]
     resources = [
