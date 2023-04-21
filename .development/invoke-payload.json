@@ -15,13 +15,13 @@
           "binaryListValues": [],
           "dataType": "String",
           "stringListValues": [],
-          "stringValue": "acme"
+          "stringValue": "trivialsecuritytest"
         },
         "queued_by": {
           "binaryListValues": [],
           "dataType": "String",
           "stringListValues": [],
-          "stringValue": "chris@langton.cloud"
+          "stringValue": "chris@trivialsec.com"
         },
         "queued_timestamp": {
           "binaryListValues": [],

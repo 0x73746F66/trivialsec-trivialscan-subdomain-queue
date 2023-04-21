@@ -7,7 +7,7 @@ readonly APP_ENV=${APP_ENV:-Dev}
 readonly BUILD_ENV=${BUILD_ENV:-development}
 readonly SOURCE_FILE=plans/${SOURCE_FILE:-$(echo "$APP_ENV" | awk '{print tolower($0)}')-$(basename $CWD).zip}
 readonly IMAGE_NAME=${IMAGE_NAME:-pip-builder}
-readonly PYTHON_VERSION=${PYTHON_VERSION:-python3.9}
+readonly PYTHON_VERSION=${PYTHON_VERSION:-python3.10}
 
 echo -e "${PRIMARY}Cleaning up${NC}"
 rm ${SOURCE_FILE}

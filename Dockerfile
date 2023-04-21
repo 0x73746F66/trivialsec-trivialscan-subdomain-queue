@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/python:3.9
+FROM public.ecr.aws/lambda/python:3.10
 
 LABEL org.opencontainers.image.authors="Christopher Langton"
 LABEL org.opencontainers.image.version="0.0.1"

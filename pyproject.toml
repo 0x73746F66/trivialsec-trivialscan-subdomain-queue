@@ -9,7 +9,7 @@ description = "Trivial Security Subdomains Queue"
 authors = [
     {name = "Christopher Langton", email = "chris@trivialsec.com"},
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
 ]

@@ -93,6 +93,7 @@ init: env ## Runs tf init tf
 	terraform -chdir=plans init -backend-config=${APP_ENV}-backend.conf -reconfigure -upgrade=true
 
 plan: ## Runs tf validate and tf plan
+	terraform -chdir=plans fmt
 	terraform -chdir=plans validate
 	terraform -chdir=plans plan -no-color -out=.tfplan
 	terraform -chdir=plans show --json .tfplan | jq -r '([.resource_changes[]?.change.actions?]|flatten)|{"create":(map(select(.=="create"))|length),"update":(map(select(.=="update"))|length),"delete":(map(select(.=="delete"))|length)}' > plans/tfplan.json

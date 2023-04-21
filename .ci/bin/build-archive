@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -x
 readonly CWD=$(pwd)
-readonly PYTHON_VERSION=${PYTHON_VERSION:-python3.9}
+readonly PYTHON_VERSION=${PYTHON_VERSION:-python3.10}
 if [ -z "${APP_ENV}" ]; then
     echo "APP_ENV not set"
     exit 1
