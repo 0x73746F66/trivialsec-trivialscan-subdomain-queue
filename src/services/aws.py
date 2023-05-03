@@ -446,6 +446,43 @@ def store_sqs(
     delay=1.5,
     backoff=1,
 )
+def complete_sqs(
+    queue_name: str,
+    receipt_handle: str
+) -> bool:
+    internals.logger.info(f"deleting {receipt_handle} {queue_name}")
+    try:
+        queue = sqs_client.get_queue_url(QueueName=queue_name)
+        if not queue.get("QueueUrl"):
+            internals.logger.error(f"no queue with name {queue_name}")
+            return False
+
+        params: dict[str, Any] = {
+            "QueueUrl": queue.get("QueueUrl"),
+            "ReceiptHandle": receipt_handle,
+        }
+        return sqs_client.delete_message(**params) is None
+    except ClientError as err:
+        if err.response["Error"]["Code"] == "InvalidIdFormat":  # type: ignore
+            internals.logger.error(f"InvalidIdFormat: {err}")
+        elif err.response["Error"]["Code"] == "ReceiptHandleIsInvalid":  # type: ignore
+            internals.logger.error(f"ReceiptHandleIsInvalid: {err}")
+        else:
+            internals.logger.exception(err)
+    return False
+
+
+@retry(
+    (
+        ConnectionClosedError,
+        ReadTimeoutError,
+        ConnectTimeoutError,
+        CapacityNotAvailableError,
+    ),
+    tries=3,
+    delay=1.5,
+    backoff=1,
+)
 def get_dynamodb(item_key: dict, table_name: Tables) -> Union[dict, None]:
     internals.logger.info(f"get_dynamodb table: {table_name.value}")
     internals.logger.debug(f"item_key: {item_key}")

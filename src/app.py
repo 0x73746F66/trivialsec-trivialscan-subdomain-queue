@@ -51,6 +51,7 @@ class EventRecord(BaseModel):
         kwargs["type"] = body['type']
         super().__init__(**kwargs)
 
+
 def handler(event, context):
     for _record in event["Records"]:
         record = EventRecord(**_record)
@@ -58,6 +59,10 @@ def handler(event, context):
         account = models.MemberAccount(name=record.account_name)
         if not account.load():
             internals.logger.info(f"Missing account {record.account_name}")
+            services.aws.complete_sqs(
+                queue_name=f'{internals.APP_ENV.lower()}-subdomains',
+                receipt_handle=record.receiptHandle,
+            )
             continue
         scanner_record = models.ScannerRecord(account_name=account.name)  # type: ignore
         if not scanner_record.load():
@@ -66,16 +71,28 @@ def handler(event, context):
         tld = TLDExtract(cache_dir=internals.CACHE_DIR)(f"http://{record.hostname}")
         if tld.registered_domain != record.hostname:
             internals.logger.info(f"Not an Apex domain {record.hostname}")
+            services.aws.complete_sqs(
+                queue_name=f'{internals.APP_ENV.lower()}-subdomains',
+                receipt_handle=record.receiptHandle,
+            )
             continue
         checkpoint_path = f"{internals.APP_ENV}/checkpoints/subdomains/{datetime.now(tz=timezone.utc).strftime('%Y%m%d')}/{record.hostname}"
         if services.aws.object_exists(checkpoint_path):
             internals.logger.info(f"Already processed today {record.hostname}")
+            services.aws.complete_sqs(
+                queue_name=f'{internals.APP_ENV.lower()}-subdomains',
+                receipt_handle=record.receiptHandle,
+            )
             continue
 
         internals.logger.info(f"PROCESSING {record.hostname}")
         executable = os.path.realpath(os.path.join(os.path.dirname(__file__), 'vendored', 'amass', 'amass'))
         if not Path(executable).is_file() or not os.access(executable, os.X_OK):
             internals.logger.error(f"Not executable {executable}")
+            services.aws.complete_sqs(
+                queue_name=f'{internals.APP_ENV.lower()}-subdomains',
+                receipt_handle=record.receiptHandle,
+            )
             continue
         config_path = os.path.realpath(os.path.join(os.path.dirname(__file__), 'amass.ini'))
         word_list = os.path.realpath(os.path.join(os.path.dirname(__file__), 'vendored', 'amass', internals.AMASS_WORD_LIST))
@@ -103,17 +120,29 @@ def handler(event, context):
                 internals.logger.info(console_output)
             else:
                 internals.logger.error(console_output)
+                services.aws.complete_sqs(
+                    queue_name=f'{internals.APP_ENV.lower()}-subdomains',
+                    receipt_handle=record.receiptHandle,
+                )
                 continue
 
         result_json = Path(output_file)
         if not result_json.exists():
             internals.logger.warning("No results")
+            services.aws.complete_sqs(
+                queue_name=f'{internals.APP_ENV.lower()}-subdomains',
+                receipt_handle=record.receiptHandle,
+            )
             continue
         for line in result_json.read_text(encoding='utf8').strip().splitlines():
             try:
                 result = json.loads(line.strip())
             except json.decoder.JSONDecodeError:
                 internals.logger.error(f"JSONDecodeError {line}")
+                services.aws.complete_sqs(
+                    queue_name=f'{internals.APP_ENV.lower()}-subdomains',
+                    receipt_handle=record.receiptHandle,
+                )
                 continue
             for address in result.get("addresses", []):
                 item = models.ObservedIdentifier(
@@ -179,3 +208,7 @@ def handler(event, context):
                 },
             )
         services.aws.store_s3(checkpoint_path, '1')
+        services.aws.complete_sqs(
+            queue_name=f'{internals.APP_ENV.lower()}-subdomains',
+            receipt_handle=record.receiptHandle,
+        )

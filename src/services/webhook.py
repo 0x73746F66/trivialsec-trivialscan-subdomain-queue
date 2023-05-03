@@ -69,6 +69,6 @@ def _sign_and_send(
         body=payload.dict(),
         headers={
             "Authorization": _make_header(account_name, client_mac, unix_ts, algorithm),
-            "User-Agent": "Trivial Security signed webhook",
+            "User-Agent": "Trivial Security",
         },
     )
