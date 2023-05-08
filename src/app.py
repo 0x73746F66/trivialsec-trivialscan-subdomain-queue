@@ -7,6 +7,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
 
+from lumigo_tracer import lumigo_tracer
 from pydantic import BaseModel
 from tldextract import TLDExtract
 
@@ -52,8 +53,8 @@ class EventRecord(BaseModel):
         super().__init__(**kwargs)
 
 
-def handler(event, context):
-    for _record in event["Records"]:
+def main(records: list[dict]):
+    for _record in records:
         record = EventRecord(**_record)
         internals.logger.info(f"Triggered by {record}")
         account = models.MemberAccount(name=record.account_name)
@@ -119,7 +120,12 @@ def handler(event, context):
             if console_output.endswith("Discoveries are being migrated into the local database"):
                 internals.logger.info(console_output)
             else:
-                internals.logger.error(console_output)
+                internals.always_log(console_output)
+                internals.trace_tag({
+                    'AMASS_WORD_LIST': internals.AMASS_WORD_LIST,
+                    'AMASS_SKIP_EXEC': internals.AMASS_SKIP_EXEC,
+                    'AMASS_TIMEOUT': internals.AMASS_TIMEOUT,
+                })
                 services.aws.complete_sqs(
                     queue_name=f'{internals.APP_ENV.lower()}-subdomains',
                     receipt_handle=record.receiptHandle,
@@ -212,3 +218,18 @@ def handler(event, context):
             queue_name=f'{internals.APP_ENV.lower()}-subdomains',
             receipt_handle=record.receiptHandle,
         )
+    return True
+
+
+@lumigo_tracer(
+    token=services.aws.get_ssm(f'/{internals.APP_ENV}/{internals.APP_NAME}/Lumigo/token', WithDecryption=True),
+    should_report=internals.APP_ENV == "Prod",
+    skip_collecting_http_body=True,
+    verbose=internals.APP_ENV != "Prod"
+)
+def handler(event, context):  # pylint: disable=unused-argument
+    try:
+        return main(event["Records"])
+    except Exception as err:
+        internals.always_log(err)
+    return False

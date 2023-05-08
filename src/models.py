@@ -1286,7 +1286,6 @@ class ScannerRecord(BaseModel, DAL):
         return services.aws.delete_s3(self.object_key)
 
 
-
 class WebhookPayload(BaseModel):
     event_id: UUID
     event_name: WebhookEvent

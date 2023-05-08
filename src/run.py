@@ -1,3 +1,4 @@
+import contextlib
 import sys
 import json
 import logging
@@ -12,8 +13,8 @@ from rich.logging import RichHandler
 import app
 import internals
 
-AWS_ACCOUNT = getenv("AWS_ACCOUNT", "984310022655")
-AWS_REGION = getenv("AWS_REGION", "ap-southeast-2")
+AWS_ACCOUNT = getenv("AWS_ACCOUNT", default="984310022655")
+AWS_REGION = getenv("AWS_REGION", default="ap-southeast-2")
 
 def cli():
     now = datetime.now(timezone.utc)
@@ -85,7 +86,8 @@ def run():
     internals.logger.setLevel(log_level)
     if parser.parse_args().skip_exec:
         internals.AMASS_SKIP_EXEC = 'yes'
-    cli()
+    with contextlib.suppress(KeyboardInterrupt):
+        cli()
 
 
 if __name__ == "__main__":

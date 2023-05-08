@@ -1,10 +1,9 @@
 import json
-import hmac
 import uuid
-import hashlib
-from datetime import timezone, datetime
+from datetime import timezone, datetime, timedelta
 
 import validators
+import jwt
 
 import internals
 import models
@@ -25,7 +24,7 @@ def send(event_name: models.WebhookEvent, account: models.MemberAccount, data: d
                 event_name=event_name,
                 webhook=webhook,
                 data=data,
-                account_name=account.name
+                account_name=account.name,
             )
 
 
@@ -34,15 +33,7 @@ def _sign_and_send(
     webhook: models.Webhooks,
     data: dict,
     account_name: str,
-    algorithm: str = "sha3_512",
 ):
-    def _make_header(identifier: str, mac: str, ts: int, alg: str = "sha3_512"):
-        """
-        Never hint the alg when signed requests purpose is for real
-        authorization. This is fine, and helpful, for webhooks.
-        """
-        return f'HMAC id="{identifier}", mac="{mac}", ts="{ts}", alg="{alg}"'
-
     payload = models.WebhookPayload(
         event_id=uuid.uuid4(),
         event_name=event_name,
@@ -50,25 +41,34 @@ def _sign_and_send(
         payload=data,
     )
     raw_body = json.dumps(payload.dict(), cls=internals.JSONEncoder)
-    unix_ts = round(datetime.now(timezone.utc).replace(microsecond=0).timestamp() * 1000)
-    client_mac = internals.HMAC(
-        authorization_header=_make_header(account_name, "na", unix_ts),
-        request_url=str(webhook.endpoint),
-        method="POST",
-        raw_body=raw_body,
-        algorithm=algorithm,
+    internals.logger.debug(f"raw_body {raw_body}")
+    services.aws.store_s3(
+        f"{internals.APP_ENV}/accounts/{account_name}/webhooks/{payload.event_name}/{payload.event_id}.json",
+        raw_body,
     )
-    client_mac = hmac.new(
-        webhook.signing_secret.encode("utf8"),  # type: ignore
-        client_mac.canonical_string.encode("utf8"),
-        hashlib.sha3_512,
-    ).hexdigest()
-    services.aws.store_s3(f"{internals.APP_ENV}/accounts/{account_name}/webhooks/{payload.event_name}/{payload.event_id}.json", json.dumps(data, cls=internals.JSONEncoder))
+    self_contained_token = jwt.encode(
+        payload={
+            # mandatory claims
+            "iat": datetime.now(tz=timezone.utc),
+            "nbf": datetime.now(tz=timezone.utc) + timedelta(seconds=3),
+            "exp": datetime.now(tz=timezone.utc) + timedelta(days=1),
+            "aud": [f"urn:trivialsec:webhook:client_endpoint:{account_name}"],
+            "iss": internals.DASHBOARD_URL,
+            "sub": internals.NAMESPACE.hex,
+            # custom claims
+            "cep": webhook.endpoint,
+            "eid": payload.event_id.urn,
+            "evn": payload.event_name.value,
+        },
+        key=webhook.signing_secret.encode("utf8"),  # type: ignore
+        algorithm="HS256",
+    )
+    internals.trace_tag({payload.event_id.hex: f"urn:trivialsec:webhook:{account_name}:{event_name.value}"})
     internals.post_beacon(
         url=webhook.endpoint,
         body=payload.dict(),
         headers={
-            "Authorization": _make_header(account_name, client_mac, unix_ts, algorithm),
+            "Authorization": self_contained_token,
             "User-Agent": "Trivial Security",
         },
     )

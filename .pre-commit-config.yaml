@@ -94,10 +94,10 @@ repos:
       - id: pip-audit
         name: pip-audit
         language: system
-        entry: pip-audit
-        args: [-r]
+        entry: pip-audit .
+        pass_filenames: false
         types: [plain-text, non-executable, file]
-        files: ^(requirements)\.(txt)$
+        args: [--skip-editable,--progress-spinner=off,--format=cyclonedx-json,--output=cyclonedx.json]
 
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
