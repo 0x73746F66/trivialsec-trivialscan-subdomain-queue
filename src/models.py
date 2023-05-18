@@ -178,6 +178,13 @@ class DataPlaneCategory(str, Enum):
     VNC_REMOTE_FRAME_BUFFER = 'vncrfb'
 
 
+class ResultLevel(str, Enum):
+    FAIL = "fail"
+    WARN = "warn"
+    PASS = "pass"  # nosec
+    INFO = "info"
+
+
 class AccountRegistration(BaseModel):
     name: str
     display: Optional[str]
@@ -1027,7 +1034,7 @@ class EvaluationItem(DefaultInfo):
     result_value: Union[bool, str, None]
     result_label: str
     result_text: str
-    result_level: Optional[str]
+    result_level: Optional[ResultLevel]
     score: int = Field(default=0)
     description: Optional[str]
     recommendation: Optional[str]

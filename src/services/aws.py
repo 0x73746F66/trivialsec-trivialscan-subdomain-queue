@@ -79,7 +79,7 @@ def object_exists(file_path: str, bucket_name: str = STORE_BUCKET, **kwargs):
         return content.get("ResponseMetadata", None) is not None
     except ClientError as err:
         internals.logger.info(err, exc_info=True)
-        internals.always_log(err)
+        internals.always_log(err, is_issue=False)
     return False
 
 

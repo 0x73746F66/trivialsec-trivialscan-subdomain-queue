@@ -18,7 +18,7 @@ from uuid import UUID
 
 import boto3
 import requests
-from lumigo_tracer import add_execution_tag, error as lumigo_error
+from lumigo_tracer import add_execution_tag, error as lumigo_error, info as lumigo_info, warn as lumigo_warn
 from pydantic import (
     HttpUrl,
     AnyHttpUrl,
@@ -39,6 +39,7 @@ NAMESPACE = UUID('bc6e2cd5-1f59-487f-b05b-49946bd078b2')
 AMASS_TIMEOUT = getenv("AMASS_TIMEOUT", default='13')
 AMASS_WORD_LIST = getenv("AMASS_WORD_LIST", default="bitquark_subdomains_top100K.txt")
 AMASS_SKIP_EXEC = getenv("AMASS_SKIP_EXEC", default='no')
+UNHANDLED_ERROR = "UnhandledError"
 
 logger = logging.getLogger(__name__)
 if getenv("AWS_EXECUTION_ENV") is not None:
@@ -46,18 +47,37 @@ if getenv("AWS_EXECUTION_ENV") is not None:
 logger.setLevel(getattr(logging, LOG_LEVEL, DEFAULT_LOG_LEVEL))
 
 
-def always_log(message: Union[str, Exception]):
+def always_log(message: Union[str, Exception], is_issue: bool = True):
     caller = getframeinfo(stack()[1][0])
     alert_type = (
         message.__class__.__name__
-        if hasattr(message, '__class__') and message is not str
-        else "UnhandledError"
+        if hasattr(message, "__class__") and message is not str
+        else UNHANDLED_ERROR
     )
-    filename = caller.filename.replace(getenv("LAMBDA_TASK_ROOT", ""), "") if getenv("AWS_EXECUTION_ENV") is not None and getenv("LAMBDA_TASK_ROOT") else caller.filename.split('/src/')[1]
-    lumigo_error(f"{filename}:{caller.function}:{caller.lineno} - {message}", alert_type, extra={
-        'LOG_LEVEL': LOG_LEVEL,
-        'NAMESPACE': NAMESPACE.hex,
-    })
+    filename = (
+        caller.filename.replace(getenv("LAMBDA_TASK_ROOT", ""), "")
+        if getenv("AWS_EXECUTION_ENV") is not None and getenv("LAMBDA_TASK_ROOT")
+        else caller.filename.split("/src/")[1]
+    )
+    if not is_issue:
+        lumigo_info(
+            f"{filename}:{caller.function}:{caller.lineno} - {message}",
+            "Info",
+        )
+    if alert_type == UNHANDLED_ERROR:
+        lumigo_warn(
+            f"{filename}:{caller.function}:{caller.lineno} - {message}",
+            alert_type,
+            extra={
+                "LOG_LEVEL": LOG_LEVEL,
+                "NAMESPACE": NAMESPACE.hex,
+            },
+        )
+    else:
+        lumigo_error(
+            f"{filename}:{caller.function}:{caller.lineno} - {message}",
+            alert_type
+        )
 
 
 class DelayRetryHandler(Exception):
