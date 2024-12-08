@@ -15,7 +15,7 @@ classifiers = [
 ]
 dependencies = [
     "lumigo-tracer >= 1.1.219",
-    "pydantic == 1.9.2",
+    "pydantic == 1.10.13",
     "retry == 0.9.2",
     "validators == 0.18.2",
     "tldextract == 3.4.0",
