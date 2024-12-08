@@ -20,7 +20,7 @@ dependencies = [
     "validators == 0.18.2",
     "tldextract == 3.4.0",
     "pyjwt >= 2.6.0",
-    "requests < 2.30.0",
+    "requests < 2.33.0",
     "urllib3 < 2"
 ]
 
